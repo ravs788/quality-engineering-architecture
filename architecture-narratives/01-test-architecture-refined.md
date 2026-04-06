@@ -89,14 +89,14 @@ The previous state had several constraints:
 - poor parallelism for desktop-driven flows
 - manual effort to keep test environments current
 
-The refined direction was to make execution more reproducible and less dependent on manually maintained environments:
+The refined direction was to make execution more reproducible and less dependent on manually maintained environments. The specific proposal combined Kubernetes-based orchestration with standardized Docker images and scripted environment preparation:
 
-- provision execution environments on demand instead of relying only on long-lived physical machines
-- standardize the test environment so runner setup was repeatable
-- script application upgrade and environment preparation steps
+- use Kubernetes to orchestrate ephemeral execution infrastructure rather than relying only on long-lived physical machines
+- use Docker images to make the supporting test environment reproducible and easier to provision consistently
+- script application upgrade and environment preparation steps instead of updating each execution environment manually
 - create test data through APIs where possible so UI automation focused on verification rather than setup
 
-This was intended to reduce environment drift and shorten the time spent preparing the system for desktop test execution.
+For a desktop-heavy product, this did not remove the need for Windows-capable execution environments, but it did reduce environment drift and shorten the time spent preparing the system for desktop test execution.
 
 ### 3.5 Test Cadence
 
@@ -127,6 +127,15 @@ The performance workstream then focused on:
 - adding or removing scenarios based on current risk
 - revisiting SLA expectations for the covered workflows
 
+### 3.7 Alternatives Considered
+
+Several alternatives were considered implicitly during the evolution of the architecture, even when they were not all formalized as separate design documents.
+
+- **Keep broad UI regression as the primary safety net:** rejected because execution cost, maintenance effort, and feedback latency were already too high.
+- **Expand automation without pruning the manual suite:** rejected because it would grow total validation cost without improving portfolio quality.
+- **Rely mainly on long-lived physical VM infrastructure:** rejected because manual updates and environment drift made the execution model hard to scale.
+- **Adopt another performance tool such as k6:** considered, but JMeter was selected because it had broader support in the team context and a more practical migration path from the existing suite.
+
 ## 4. Trade-Offs
 
 The refined architecture improved sustainability and feedback speed, but it was not free of trade-offs.
@@ -147,7 +156,21 @@ The resulting test architecture was more intentional than the original manual-he
 - Daily execution and CI smoke coverage improved feedback structure across the release cycle.
 - Performance testing moved toward a supportable toolchain with refreshed scenarios and revised SLA alignment.
 
-## 6. Architecture Summary
+### 5.1 Measurable Impact
+
+The architecture changes produced visible operational improvements in the regression process.
+
+- daily UI regression execution was reduced from `8 hours` to `4.5 hours`
+- approximately `500` high-value scenarios were moved from UI or manual validation into lower-layer automation
+- environment preparation effort dropped from roughly `2 hours` each day to about `15 minutes`
+
+These changes mattered not only because they reduced execution cost, but because they improved the speed and sustainability of the feedback loop. The team was able to spend less time preparing and running expensive UI validation and more time using lower-layer automation for faster, more targeted confidence.
+
+## 6. Lessons Learned
+
+The main lesson from this work was that test architecture improvement came less from adding more automation and more from redistributing validation to the right layers. The manual estate had to be treated as a managed portfolio, not as a permanent regression backlog. In retrospect, the most valuable decisions were the ones that reduced UI dependence, made environment setup more reproducible, and forced regular removal of low-value tests rather than allowing the suite to grow unchecked.
+
+## 7. Architecture Summary
 
 The key architectural shift was from "large manual regression with expensive UI automation support" to "risk-based layered validation with a curated manual suite and targeted desktop automation."
 
