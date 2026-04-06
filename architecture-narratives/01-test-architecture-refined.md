@@ -1,84 +1,154 @@
 # Refined Test Architecture for Audit Domain Project
 
-## 1. Introduction  
-This document outlines a refined test architecture for our audit domain project, focusing on clarity, visualization, and actionable insights. The project follows a **4-6 month release cycle** with structured phases:  
-- **Development**: Multi-sprint delivery (3-4 sprints of 1 month each)  
-- **Testing**: 2-3 months of QA, UAT, and performance testing  
-- **Release**: Production deployment after final validation  
+## 1. Context
 
-The architecture addresses two core applications:  
-- **Desktop Application**: WPF/Angular-based (offline/online sync, multi-auditor collaboration)  
-- **Web Configuration App**: Dynamically generated based on engagement options  
+The audit domain solution consisted of two connected products:
 
-Visuals and diagrams will be incorporated to enhance understanding.
+- **Desktop application (WPF + Angular):** used by auditors to manage audit work for an engagement. Multiple auditors could work on the same engagement in both online and offline modes. Data synchronization happened at defined intervals, and conflicting changes required explicit resolution.
+- **Configuration application (Web):** used to define engagement options. Based on the selected options, the internal pages and behavior of the engagement experience were generated.
 
----
+The release model was long-running and validation-heavy:
 
-## 2. Components Overview  
+- **Development phase:** 4-6 month release cycle with 1-month sprints
+- **Detailed test phase:** 2-3 months of testing by QA, business stakeholders, and UAT teams
+- **Release phase:** production deployment after final validation
 
-### Test Architecture Focus  
-- **Current State**: Manual testing dominance with incremental automation  
-- **Future State**: Automated test expansion across P1-P2 categories  
+This domain introduced a set of risks that the test architecture had to address directly:
 
----
+- correctness of offline and online synchronization
+- concurrent updates by multiple auditors on the same engagement
+- conflict detection and conflict resolution behavior
+- correctness of configuration-driven application behavior
+- regression risk across a long release cycle with multiple validation stages
 
-## 3. Release Process  
+## 2. Problem Statement
 
-### Key Phases  
-| Phase          | Duration | Activities                          |  
-|----------------|----------|--------------------------------------|  
-| **Development**| **Multi-sprint** (e.g., 3-4 sprints of 1 month each) | Feature sprints, manual testing, incremental automation setup |  
-| Testing        | 2-3 mo   | Tester QA, Business UAT              |  
-| Release        | N/A      | Production deployment                |  
+The original test approach relied heavily on a large manual regression suite accumulated over multiple releases. That approach provided coverage, but it created scaling and feedback problems:
 
----
+- critical tests existed, but execution cost was high
+- many workflows were verified only through the UI layer
+- the desktop automation estate was slow to execute and difficult to maintain
+- execution depended on physical VMs and manual application updates
+- manual daily execution and Azure DevOps result updates consumed significant effort
+- performance coverage existed, but it depended on a Microsoft tool that was approaching deprecation and had limited support
 
-## 4. Test Strategy Refinement  
-### Prioritization Matrix (P1-P4)  
-| Priority | Manual Tests | Automated Tests |  
-|----------|--------------|-----------------|  
-| P1       | High         | Target for full automation |  
-| P2       | Medium       | Partial automation |  
-| P3       | Low          | Manual only      |  
-| P4       | Very Low     | Manual backup    |  
+The central architecture problem was not lack of tests. It was that too much validation lived in the most expensive layer, which slowed feedback and made the regression portfolio harder to sustain across releases.
 
-### Automation Focus  
-- **P1 Tests**: Unit/component tests for critical workflows (developed incrementally across sprints)  
-- **P2 Tests**: API tests for core integrations (started in early sprints)  
-- **P3/P4**: Manual tests for edge cases and rare scenarios  
+## 3. Decision
 
----
+The test architecture was refined around a layered validation model, using the manual suite as the starting point rather than replacing it all at once.
 
-## 5. Decisions & Trade-offs  
-- **Manual → Automation Shift**:  
-  - Reduced UI dependency by moving tests to unit/API layers  
-  - Added tags for priority, redundancy, and test type  
-- **Trade-offs**:  
-  - Initial investment in automation tools vs. long-term ROI  
-  - Manual redundancy retained for critical edge cases  
-  - Multi-sprint development allows phased automation implementation  
+### 3.1 Baseline and Prioritization
 
----
+The existing manual suite remained the initial source of coverage. Tests were categorized into priorities such as P1-P4 and grouped with labels so the suite could be managed more deliberately.
 
-## 6. Visual Enhancements  
-1. **Previous vs Future Test Strategy Flowchart**  
-   ![Test Evolution](Path_to_previous_future_diagram.png)  
-   *Figure 4: Transition from manual to automated testing*  
+The suite was then reviewed to answer four questions for each scenario:
 
-2. **Manual vs Automated Coverage Matrix**  
-   | Test Type       | Manual Coverage | Automated Coverage |  
-   |----------------|-----------------|--------------------|  
-   | Functional      | 70%             | 30% (growing)      |  
-   | Performance     | 40%             | 10%                |  
-   | Edge Cases      | 90%             | 5%                 |  
+- Is the priority still correct?
+- Is the test redundant with another test?
+- Can the behavior be validated at a lower layer such as unit, component, integration, or API?
+- Should the scenario remain manual, or should it be automated?
 
-3. **Automation Roadmap**  
-   ![Automation Timeline](Path_to_roadmap_diagram.png)  
-   *Figure 5: Planned automation expansion across sprints*  
+### 3.2 Layered Test Strategy
 
----
+The main architectural decision was to move as much verification as possible out of the UI layer and into lower, faster, and more targeted layers.
 
-## 7. Next Steps  
-- [ ] Develop test architecture diagrams (flowcharts/roadmaps)  
-- [ ] Integrate test automation framework incrementally  
-- [ ] Validate with stakeholders
+| Concern | Preferred Layer | Rationale |
+|---|---|---|
+| business rules and conflict logic | unit tests | fast validation of deterministic behavior |
+| component behavior and page-level logic | component tests | validates isolated functional behavior without full end-to-end cost |
+| service and integration contracts | integration and API tests | validates system interaction and data flow |
+| end-to-end engagement workflows | UI automation | retained only for a focused set of critical paths |
+| exploratory and rare edge scenarios | manual testing | preserves human evaluation where automation is low value |
+
+This led to three concrete actions:
+
+- increase unit, component, integration, and API coverage
+- remove redundant UI scenarios once equivalent lower-layer coverage existed
+- keep a very small number of UI tests for critical-path redundancy
+
+### 3.3 Manual and Automated Portfolio Management
+
+The manual suite was treated as a living asset, not a static backlog. Additional tagging and metadata were introduced so the team could continuously decide:
+
+- what still mattered
+- what no longer justified execution cost
+- what had already been covered elsewhere
+- what should move into automation next
+
+The operating principle was that tests should be removed when they stopped adding value, not only added when new features appeared.
+
+### 3.4 Execution Model for UI Automation
+
+UI automation remained necessary for a desktop product with complex user workflows, but the execution model needed to be improved.
+
+The previous state had several constraints:
+
+- long execution times
+- dependence on physical VMs
+- poor parallelism for desktop-driven flows
+- manual effort to keep test environments current
+
+The refined direction was to make execution more reproducible and less dependent on manually maintained environments:
+
+- provision execution environments on demand instead of relying only on long-lived physical machines
+- standardize the test environment so runner setup was repeatable
+- script application upgrade and environment preparation steps
+- create test data through APIs where possible so UI automation focused on verification rather than setup
+
+This was intended to reduce environment drift and shorten the time spent preparing the system for desktop test execution.
+
+### 3.5 Test Cadence
+
+The execution strategy was split by feedback speed:
+
+- **CI pipeline:** a small smoke suite to indicate build health quickly
+- **Daily execution:** broader regression coverage for the active test estate
+- **Release-cycle validation:** deeper manual, business, and UAT validation during the longer test phase
+
+This preserved rapid build feedback without forcing the full end-to-end portfolio into every pipeline run.
+
+### 3.6 Performance Test Architecture
+
+The performance test suite remained intentionally small and focused on core business scenarios, but its technical foundation was changed.
+
+The existing Microsoft performance tool was becoming a liability because of impending deprecation and limited support. The team therefore evaluated better-supported alternatives, including JMeter and k6.
+
+JMeter was selected because it offered:
+
+- broader support and community knowledge
+- sufficient flexibility for the required scenarios
+- a practical migration path from the existing suite
+
+The performance workstream then focused on:
+
+- defining a migration plan
+- revisiting the existing performance scenarios
+- adding or removing scenarios based on current risk
+- revisiting SLA expectations for the covered workflows
+
+## 4. Trade-Offs
+
+The refined architecture improved sustainability and feedback speed, but it was not free of trade-offs.
+
+- Moving coverage to lower layers required upfront analysis and test redesign.
+- Retaining a small UI redundancy set meant accepting some duplicate coverage in exchange for critical-path confidence.
+- Desktop automation could not be optimized in the same way as stateless web-only tests, so environment orchestration still required deliberate engineering.
+- Treating the manual suite as a curated portfolio required ongoing governance instead of one-time cleanup.
+- Migrating performance tooling introduced short-term transition cost in exchange for better long-term maintainability.
+
+## 5. Outcome
+
+The resulting test architecture was more intentional than the original manual-heavy model.
+
+- The manual suite became the source for prioritization and architecture decisions rather than the default execution layer for every scenario.
+- More validation was pushed into unit, component, integration, and API layers, reducing unnecessary UI dependence.
+- UI automation was repositioned as a focused critical-path safety net rather than the primary mechanism for broad regression coverage.
+- Daily execution and CI smoke coverage improved feedback structure across the release cycle.
+- Performance testing moved toward a supportable toolchain with refreshed scenarios and revised SLA alignment.
+
+## 6. Architecture Summary
+
+The key architectural shift was from "large manual regression with expensive UI automation support" to "risk-based layered validation with a curated manual suite and targeted desktop automation."
+
+That shift was appropriate for this domain because the main risks were not simply page-level regressions. They were synchronization correctness, conflict handling, multi-user collaboration, and sustained regression control over a long release cycle. The refined architecture improved the team's ability to validate those risks using the cheapest reliable layer first, while still retaining selective end-to-end coverage where it mattered most.
