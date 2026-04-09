@@ -164,6 +164,8 @@ The architecture changes produced visible operational improvements in the regres
 - daily UI regression execution was reduced from `8 hours` to `4.5 hours`
 - approximately `500` high-value scenarios were moved from UI or manual validation into lower-layer automation
 - environment preparation effort dropped from roughly `2 hours` each day to about `15 minutes`
+- high-severity bugs leaked to later stages were reduced by about `60%` across `3 releases`
+- the core testing team size was reduced by about `20%` while still maintaining strong coverage and efficient execution
 
 These changes mattered not only because they reduced execution cost, but because they improved the speed and sustainability of the feedback loop. The team was able to spend less time preparing and running expensive UI validation and more time using lower-layer automation for faster, more targeted confidence.
 
