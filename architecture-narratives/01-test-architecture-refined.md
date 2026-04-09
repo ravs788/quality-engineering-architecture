@@ -80,23 +80,24 @@ The operating principle was that tests should be removed when they stopped addin
 
 ### 3.4 Execution Model for UI Automation
 
-UI automation remained necessary for a desktop product with complex user workflows, but the execution model needed to be improved.
+UI automation remained necessary for a desktop product with complex cross-screen workflows, but the way those tests were executed had to change.
 
-The previous state had several constraints:
+The previous execution model created four recurring problems:
 
-- long execution times
-- dependence on physical VMs
-- poor parallelism for desktop-driven flows
-- manual effort to keep test environments current
+- runs were slow
+- execution depended heavily on long-lived physical or manually maintained VMs
+- desktop-driven scenarios were difficult to parallelize effectively
+- upgrading the application and preparing the environment required repeated manual effort
 
-The refined direction was to make execution more reproducible and less dependent on manually maintained environments. The specific proposal combined Kubernetes-based orchestration with standardized Docker images and scripted environment preparation:
+The refined direction was to make execution more reproducible and less dependent on manually prepared environments, without pretending that desktop UI execution could be parallelized freely on a single VM. The proposal combined standardized Docker images with scripted preparation of VM-based execution targets:
 
-- use Kubernetes to orchestrate ephemeral execution infrastructure rather than relying only on long-lived physical machines
-- use Docker images to make the supporting test environment reproducible and easier to provision consistently
-- script application upgrade and environment preparation steps instead of updating each execution environment manually
-- create test data through APIs where possible so UI automation focused on verification rather than setup
+- use Docker images for supporting services and tooling so environments could be provisioned more consistently on the VM-based test infrastructure
+- release upgraded versions of the images so application and supporting infrastructure changes could be deployed quickly onto the VMs instead of being updated manually on each machine
+- script application installation and environment preparation steps instead of updating each execution target by hand
+- create prerequisite data through APIs where possible so UI automation spent time on workflow verification rather than setup
+- accept that desktop application flows could not be parallelized effectively on a single VM, and scale execution only by adding more prepared machines when needed
 
-For a desktop-heavy product, this did not remove the need for Windows-capable execution environments, but it did reduce environment drift and shorten the time spent preparing the system for desktop test execution.
+For a desktop-heavy product, the core execution model still depended on Windows-capable VMs for the UI automation itself. The improvement was not full infrastructure abstraction. It was the reduction of environment drift and manual setup effort through repeatable images, scripted upgrades, and cleaner separation between environment preparation and test execution.
 
 ### 3.5 Test Cadence
 
