@@ -169,7 +169,17 @@ These changes mattered not only because they reduced execution cost, but because
 
 ## 6. Lessons Learned
 
-The main lesson from this work was that test architecture improvement came less from adding more automation and more from redistributing validation to the right layers. The manual estate had to be treated as a managed portfolio, not as a permanent regression backlog. In retrospect, the most valuable decisions were the ones that reduced UI dependence, made environment setup more reproducible, and forced regular removal of low-value tests rather than allowing the suite to grow unchecked.
+Several lessons became clear through this work.
+
+- **More automation was not the primary answer.** The real improvement came from moving validation to the cheapest reliable layer rather than continuing to expand the most expensive one. Many scenarios that had historically lived in manual testing or UI automation were better expressed as unit, component, integration, or API checks.
+- **The manual suite was useful, but only when treated as a managed portfolio.** The existing estate provided valuable domain coverage and prioritization input, but it could not remain an ever-growing backlog. It needed periodic review, pruning, reclassification, and selective promotion into automation.
+- **UI automation had to be treated as a scarce resource.** For a desktop-heavy system, UI automation remained important for critical user workflows, but it was too slow and operationally expensive to act as the default regression layer. Keeping it focused improved both sustainability and signal quality.
+- **Environment engineering mattered almost as much as test design.** Standardized images, scripted preparation, and faster VM refresh cycles removed a large amount of avoidable operational friction. That work did not make tests smarter, but it made the execution model far more dependable and practical.
+- **Desktop automation had hard scaling limits.** Unlike stateless service or web checks, desktop application flows could not simply be parallelized freely on a single machine. The architecture had to accept that constraint and optimize around it instead of assuming generic cloud-style elasticity.
+- **Setup through APIs created disproportionate value.** When prerequisite data could be created outside the UI, the automated UI suite became faster, more stable, and more focused on what actually needed end-to-end verification.
+- **Removing tests was as important as adding them.** A sustainable test architecture required explicit decisions about what to stop running, not only what to automate next. Without that discipline, execution cost would continue to grow even if automation coverage improved.
+
+In retrospect, the most valuable decisions were the ones that reduced unnecessary UI dependence, improved the reproducibility of the execution environment, and created a governance model for continuously reshaping the validation portfolio as the product evolved.
 
 ## 7. Architecture Summary
 
